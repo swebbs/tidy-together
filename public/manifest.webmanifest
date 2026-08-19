@@ -1,0 +1,9 @@
+{
+  "name": "Jenn & Sam Chore Tracker",
+  "short_name": "Chores",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffaf5",
+  "theme_color": "#fffaf5",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
