@@ -7,7 +7,7 @@ import webpush from 'web-push';
 
 type Person = 'Jenn' | 'Sam';
 type BucketName = 'cooking' | 'cleaning';
-interface ChoreRecord { doneAt?: number; doneBy?: Person; verified?: boolean; verifiedAt?: number; verifiedBy?: Person; }
+interface ChoreRecord { doneAt?: number; doneBy?: Person; verified?: boolean; verifiedAt?: number; verifiedBy?: Person; autoVerified?: boolean; needsImprovement?: boolean; needsImprovementAt?: number; needsImprovementBy?: Person; }
 interface SubscriptionRecord { subscription?: webpush.PushSubscription; endpoint?: string; }
 
 initializeApp();
@@ -57,7 +57,20 @@ export const choreNotifications = onValueWritten({ ref: '/chores/{choreKey}', in
   const { chore } = keyParts(event.params.choreKey);
   if (!before?.doneAt && after.doneBy) await notify(otherPerson(after.doneBy), 'New chore completed', `${after.doneBy} completed ${chore}. Please verify it.`);
   if (!before?.verified && after.verified && after.verifiedBy && after.doneBy) await notify(after.doneBy, 'Chore verified', `${after.verifiedBy} verified your ${chore} chore.`);
+  if (!before?.needsImprovement && after.needsImprovement && after.needsImprovementBy && after.doneBy) await notify(after.doneBy, 'Work needs improvement', `${after.needsImprovementBy} says your ${chore} work needs work. Please review it.`);
 });
+
+async function autoVerifyPreviousWeek(): Promise<void> {
+  const date = new Date();
+  const saturday = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - ((date.getUTCDay() + 1) % 7)));
+  saturday.setUTCDate(saturday.getUTCDate() - 7);
+  const weekId = saturday.toISOString().slice(0, 10);
+  const records = ((await db.ref('chores').get()).val() || {}) as Record<string, ChoreRecord>;
+  const verifiedAt = Date.now();
+  await Promise.all(Object.entries(records)
+    .filter(([key, record]) => key.startsWith(`${weekId}-`) && record?.doneAt && !record.verified && !record.needsImprovement)
+    .map(([key, record]) => db.ref(`chores/${key}`).set({ ...record, verified: true, verifiedAt, autoVerified: true })));
+}
 
 async function sendScheduledReminders() {
   const date = new Date();
@@ -90,7 +103,7 @@ export const dailyChoreReminders = onSchedule({ schedule: '0 9,18 * * *', timeZo
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', hour12: false }).formatToParts(new Date());
   const weekday = parts.find((part) => part.type === 'weekday')?.value;
   const hour = Number(parts.find((part) => part.type === 'hour')?.value);
-  if (hour === 9 && weekday === 'Sat') return sendWeeklyOverview();
+  if (hour === 9 && weekday === 'Sat') { await autoVerifyPreviousWeek(); return sendWeeklyOverview(); }
   if (hour === 9 && weekday === 'Sun') return sendScheduledReminders();
   if (hour === 18 && ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(weekday)) return sendScheduledReminders();
 });

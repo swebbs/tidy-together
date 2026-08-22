@@ -1,0 +1,27 @@
+.chore.is-needs-improvement input:checked {
+  background: #c75c4a;
+  border-color: #c75c4a;
+}
+
+.needs-improvement-button {
+  grid-column: 2;
+  justify-self: start;
+  margin-top: 4px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: #a65f42;
+  font-family: Arial, sans-serif;
+  font-size: 9px;
+  white-space: nowrap;
+  text-decoration: underline;
+}
+
+.needs-improvement-button:hover {
+  background: transparent;
+  color: #7f422c;
+}
+
+.legend .needs-improvement {
+  color: #c95454;
+}
